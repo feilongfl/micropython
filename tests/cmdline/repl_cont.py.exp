@@ -1,8 +1,28 @@
-Micro Python \.\+ linux version
+Micro Python \.\+ version
 >>> # check REPL allows to continue input
 >>> 1 \\\\
 ... + 2
 3
+>>> '"'
+'"'
+>>> "'"
+"'"
+>>> '\\\\''
+"'"
+>>> "\\\\""
+'"'
+>>> '\\\\'('
+"'("
+>>> "\\\\"("
+'"('
+>>> print("\\\\"(")
+"(
+>>> print('\\\\'(')
+'(
+>>> print("\\\\'(")
+'(
+>>> print('\\\\"(')
+"(
 >>> 'abc'
 'abc'
 >>> "abc"
@@ -25,8 +45,8 @@ Micro Python \.\+ linux version
 >>> print(d[2])
 two
 >>> def f(x):
-...  print(x)
-... 
+...     print(x)
+...     [K
 >>> f(3)
 3
 >>> 

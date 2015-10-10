@@ -56,10 +56,10 @@
 /******************************************************************************
  DEFINE CONSTANTS
  ******************************************************************************/
-#define MPERROR_TOOGLE_MS                           (40)
-#define MPERROR_SIGNAL_ERROR_MS                     (1000)
+#define MPERROR_TOOGLE_MS                           (50)
+#define MPERROR_SIGNAL_ERROR_MS                     (1200)
 #define MPERROR_HEARTBEAT_ON_MS                     (80)
-#define MPERROR_HEARTBEAT_OFF_MS                    (4920)
+#define MPERROR_HEARTBEAT_OFF_MS                    (3920)
 
 /******************************************************************************
  DECLARE PRIVATE DATA
@@ -94,7 +94,7 @@ void mperror_init0 (void) {
     MAP_GPIODirModeSet(MICROPY_SYS_LED_PORT, MICROPY_SYS_LED_PORT_PIN, GPIO_DIR_MODE_OUT);
 #else
     // configure the system led
-    pin_config ((pin_obj_t *)&MICROPY_SYS_LED_GPIO, PIN_MODE_0, GPIO_DIR_MODE_OUT, PIN_TYPE_STD, PIN_STRENGTH_6MA);
+    pin_config ((pin_obj_t *)&MICROPY_SYS_LED_GPIO, PIN_MODE_0, GPIO_DIR_MODE_OUT, PIN_TYPE_STD, 0, PIN_STRENGTH_6MA);
 #endif
     mperror_heart_beat.enabled = true;
     mperror_heartbeat_switch_off();
@@ -115,7 +115,7 @@ void mperror_bootloader_check_reset_cause (void) {
 
         // since the reset cause will be changed, we must store the right reason
         // so that the application knows it when booting for the next time
-        PRCMSignalWDTReset();
+        PRCMSetSpecialBit(PRCM_WDT_RESET_BIT);
 
         MAP_PRCMHibernateWakeupSourceEnable(PRCM_HIB_SLOW_CLK_CTR);
         // set the sleep interval to 10ms

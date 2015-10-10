@@ -3,6 +3,7 @@
 #include "py/obj.h"
 #include "py/runtime.h"
 #include "py/repl.h"
+#include "py/mpz.h"
 
 #if defined(MICROPY_UNIX_COVERAGE)
 
@@ -73,6 +74,37 @@ STATIC mp_obj_t extra_coverage(void) {
         static const mp_obj_t items[] = {MP_OBJ_NEW_SMALL_INT(1), MP_OBJ_NEW_SMALL_INT(2), MP_OBJ_NEW_SMALL_INT(3)};
         mp_obj_print_helper(&mp_plat_print, mp_obj_new_attrtuple(fields, 3, items), PRINT_REPR);
         printf("\n");
+    }
+
+    // str
+    {
+        printf("# str\n");
+
+        // intern string
+        printf("%d\n", MP_OBJ_IS_QSTR(mp_obj_str_intern(mp_obj_new_str("intern me", 9, false))));
+    }
+
+    // mpz
+    {
+        printf("# mpz\n");
+
+        mp_uint_t value;
+        mpz_t mpz;
+        mpz_init_zero(&mpz);
+
+        // mpz_as_uint_checked, with success
+        mpz_set_from_int(&mpz, 12345678);
+        printf("%d\n", mpz_as_uint_checked(&mpz, &value));
+        printf("%d\n", (int)value);
+
+        // mpz_as_uint_checked, with negative arg
+        mpz_set_from_int(&mpz, -1);
+        printf("%d\n", mpz_as_uint_checked(&mpz, &value));
+
+        // mpz_as_uint_checked, with overflowing arg
+        mpz_set_from_int(&mpz, 1);
+        mpz_shl_inpl(&mpz, &mpz, 70);
+        printf("%d\n", mpz_as_uint_checked(&mpz, &value));
     }
 
     return mp_const_none;

@@ -29,7 +29,7 @@ def rm_f(fname):
 def run_micropython(pyb, args, test_file):
     if pyb is None:
         # run on PC
-        if test_file.startswith('cmdline/') or test_file == 'micropython/meminfo.py':
+        if test_file.startswith(('cmdline/', 'feature_check/')) or test_file == 'micropython/meminfo.py':
             # special handling for tests of the unix cmdline program
 
             # check for any cmdline options needed for this test
@@ -37,13 +37,18 @@ def run_micropython(pyb, args, test_file):
             with open(test_file, 'rb') as f:
                 line = f.readline()
                 if line.startswith(b'# cmdline:'):
-                    args += line[10:].strip().split()
+                    # subprocess.check_output on Windows only accepts strings, not bytes
+                    args += [str(c, 'utf-8') for c in line[10:].strip().split()]
 
             # run the test, possibly with redirected input
             try:
-                if test_file.startswith('cmdline/repl_'):
+                if 'repl_' in test_file:
                     # Need to use a PTY to test command line editing
-                    import pty
+                    try:
+                        import pty
+                    except ImportError:
+                        # in case pty module is not available, like on Windows
+                        return b'SKIP\n'
                     import select
 
                     def get():
@@ -72,7 +77,7 @@ def run_micropython(pyb, args, test_file):
                 else:
                     output_mupy = subprocess.check_output(args + [test_file])
             except subprocess.CalledProcessError:
-                output_mupy = b'CRASH'
+                return b'CRASH'
 
             # unescape wanted regex chars and escape unwanted ones
             def convert_regex_escapes(line):
@@ -159,9 +164,18 @@ def run_tests(pyb, tests, args):
     skip_native = False
 
     # Check if micropython.native is supported, and skip such tests if it's not
-    native = run_micropython(pyb, args, 'micropython/native_check.py')
+    native = run_micropython(pyb, args, 'feature_check/native_check.py')
     if native == b'CRASH':
         skip_native = True
+
+    # Check if emacs repl is supported, and skip such tests if it's not
+    t = run_micropython(pyb, args, 'feature_check/repl_emacs_check.py')
+    if not 'True' in str(t, 'ascii'):
+        skip_tests.add('cmdline/repl_emacs_keys.py')
+
+    upy_byteorder = run_micropython(pyb, args, 'feature_check/byteorder.py')
+    cpy_byteorder = subprocess.check_output([CPYTHON3, 'feature_check/byteorder.py'])
+    skip_endian = (upy_byteorder != cpy_byteorder)
 
     # Some tests shouldn't be run under Travis CI
     if os.getenv('TRAVIS') == 'true':
@@ -183,6 +197,10 @@ def run_tests(pyb, tests, args):
             skip_tests.add('extmod/zlibd_decompress.py')    # requires zlib
             skip_tests.add('extmod/ujson_dumps_float.py')   # requires floating point
             skip_tests.add('extmod/ujson_loads_float.py')   # requires floating point
+            skip_tests.add('extmod/machine1.py')            # raw memory access not supported by WiPy
+            skip_tests.add('extmod/machine_mem.py')         # raw memory access not supported by WiPy
+            skip_tests.add('extmod/uheapq1.py')             # uheapq not supported by WiPy
+            skip_tests.add('basics/exception_chain.py')     # warning is not printed
 
     # Some tests are known to fail on 64-bit machines
     if pyb is None and platform.architecture()[0] == '64bit':
@@ -190,7 +208,7 @@ def run_tests(pyb, tests, args):
 
     # Some tests use unsupported features on Windows
     if os.name == 'nt':
-        skip_tests.add('import\\import_file.py') #works but CPython prints forward slashes
+        skip_tests.add('import/import_file.py') # works but CPython prints forward slashes
 
     # Some tests are known to fail with native emitter
     # Remove them from the below when they work
@@ -203,6 +221,7 @@ def run_tests(pyb, tests, args):
         skip_tests.add('basics/bool1.py') # seems to randomly fail
         skip_tests.add('basics/del_deref.py') # requires checking for unbound local
         skip_tests.add('basics/del_local.py') # requires checking for unbound local
+        skip_tests.add('basics/exception_chain.py') # raise from is not supported
         skip_tests.add('basics/try_finally_loops.py') # requires proper try finally code
         skip_tests.add('basics/try_finally_return.py') # requires proper try finally code
         skip_tests.add('basics/unboundlocal.py') # requires checking for unbound local
@@ -215,11 +234,13 @@ def run_tests(pyb, tests, args):
         skip_tests.add('misc/sys_exc_info.py') # sys.exc_info() is not supported for native
 
     for test_file in tests:
+        test_file = test_file.replace('\\', '/')
         test_basename = os.path.basename(test_file)
         test_name = os.path.splitext(test_basename)[0]
         is_native = test_name.startswith("native_") or test_name.startswith("viper_")
+        is_endian = test_name.endswith("_endian")
 
-        if test_file in skip_tests or (skip_native and is_native):
+        if test_file in skip_tests or (skip_native and is_native) or (skip_endian and is_endian):
             print("skip ", test_file)
             skipped_tests.append(test_name)
             continue
@@ -318,7 +339,7 @@ def main():
                 test_dirs = ('basics', 'micropython', 'float', 'misc', 'extmod', 'pyb', 'pybnative', 'inlineasm')
             elif args.target == 'wipy':
                 # run WiPy tests
-                test_dirs = ('basics', 'micropython', 'misc', 'extmod')
+                test_dirs = ('basics', 'micropython', 'misc', 'extmod', 'wipy')
             else:
                 # run PC tests
                 test_dirs = ('basics', 'micropython', 'float', 'import', 'io', 'misc', 'unicode', 'extmod', 'unix', 'cmdline')

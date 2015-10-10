@@ -118,6 +118,12 @@
 #define MICROPY_ALLOC_PARSE_INTERN_STRING_LEN (10)
 #endif
 
+// Number of bytes to allocate initially when creating new chunks to store
+// parse nodes.  Small leads to fragmentation, large leads to excess use.
+#ifndef MICROPY_ALLOC_PARSE_CHUNK_INIT
+#define MICROPY_ALLOC_PARSE_CHUNK_INIT (128)
+#endif
+
 // Initial amount for ids in a scope
 #ifndef MICROPY_ALLOC_SCOPE_ID_INIT
 #define MICROPY_ALLOC_SCOPE_ID_INIT (4)
@@ -172,12 +178,6 @@
 
 /*****************************************************************************/
 /* Micro Python emitters                                                     */
-
-// Whether to emit CPython byte codes (for debugging/testing)
-// Enabling this overrides all other emitters
-#ifndef MICROPY_EMIT_CPYTHON
-#define MICROPY_EMIT_CPYTHON (0)
-#endif
 
 // Whether to emit x64 native code
 #ifndef MICROPY_EMIT_X64
@@ -306,6 +306,11 @@
 // Whether to include emacs-style readline behavior in REPL
 #ifndef MICROPY_REPL_EMACS_KEYS
 #define MICROPY_REPL_EMACS_KEYS (0)
+#endif
+
+// Whether to implement auto-indent in REPL
+#ifndef MICROPY_REPL_AUTO_INDENT
+#define MICROPY_REPL_AUTO_INDENT (0)
 #endif
 
 // Whether port requires event-driven REPL functions
@@ -464,6 +469,12 @@ typedef double mp_float_t;
 #define MICROPY_PY_BUILTINS_SLICE (1)
 #endif
 
+// Whether to support slice attribute read access,
+// i.e. slice.start, slice.stop, slice.step
+#ifndef MICROPY_PY_BUILTINS_SLICE_ATTRS
+#define MICROPY_PY_BUILTINS_SLICE_ATTRS (0)
+#endif
+
 // Whether to support frozenset object
 #ifndef MICROPY_PY_BUILTINS_FROZENSET
 #define MICROPY_PY_BUILTINS_FROZENSET (0)
@@ -504,6 +515,11 @@ typedef double mp_float_t;
 // Whether to support the Python 2 execfile function
 #ifndef MICROPY_PY_BUILTINS_EXECFILE
 #define MICROPY_PY_BUILTINS_EXECFILE (0)
+#endif
+
+// Whether to support filter function(type)
+#ifndef MICROPY_PY_BUILTINS_FILTER
+#define MICROPY_PY_BUILTINS_FILTER (1)
 #endif
 
 // Whether to support reversed function(type)
